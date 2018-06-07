@@ -54,7 +54,7 @@ class GRUCell(tf.nn.rnn_cell.RNNCell):
               initialization as before.
         Args:
             inputs: is the input vector of size [None, self.input_size]
-            state: is the previous state vector of size [None, self.state_size]
+            state: is the previous state vector of size [None, self._state_size]
             scope: is the name of the scope to be used when defining the variables inside.
         Returns:
             a pair of the output vector and the new state vector.
@@ -64,12 +64,36 @@ class GRUCell(tf.nn.rnn_cell.RNNCell):
         # It's always a good idea to scope variables in functions lest they
         # be defined elsewhere!
         with tf.variable_scope(scope):
-            ### YOUR CODE HERE (~20-30 lines)
-            pass
-            ### END YOUR CODE ###
+            Ur = tf.get_variable("U_r", shape=[self._state_size,self._state_size],
+                    initializer=tf.contrib.layers.xavier_initializer())
+            Wr = tf.get_variable("W_r", shape=[self.input_size,self._state_size],
+                    initializer=tf.contrib.layers.xavier_initializer())
+            br = tf.get_variable("b_r", shape=[self._state_size],
+                    initializer=tf.constant_initializer(0))
+
+            Uz = tf.get_variable("U_z", shape=[self._state_size,self._state_size],
+                    initializer=tf.contrib.layers.xavier_initializer())
+            Wz = tf.get_variable("W_z", shape=[self.input_size,self._state_size],
+                    initializer=tf.contrib.layers.xavier_initializer())
+            bz = tf.get_variable("b_z", shape=[self._state_size],
+                    initializer=tf.constant_initializer(0))
+
+            Uo = tf.get_variable("U_o", shape=[self._state_size,self._state_size],
+                    initializer=tf.contrib.layers.xavier_initializer())
+            Wo = tf.get_variable("W_o", shape=[self.input_size,self._state_size],
+                    initializer=tf.contrib.layers.xavier_initializer())
+            bo = tf.get_variable("b_o", shape=[self._state_size],
+                    initializer=tf.constant_initializer(0))
         # For a GRU, the output and state are the same (N.B. this isn't true
         # for an LSTM, though we aren't using one of those in our
         # assignment)
+        # h_t = z_t * h_{t-1} + (1 - z_t) * o_t
+
+        z = tf.sigmoid(tf.matmul(inputs,Wz) + tf.matmul(state,Uz) + bz)
+        r = tf.sigmoid(tf.matmul(inputs,Wr) + tf.matmul(state,Ur) + br)
+        o = tf.tanh(tf.matmul(inputs,Wo) + tf.multiply(r,tf.matmul(state,Uo)) + bo)
+        new_state = tf.multiply(z,state) + tf.multiply(1-z,o)
+
         output = new_state
         return output, new_state
 
