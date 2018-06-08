@@ -86,9 +86,9 @@ class SequencePredictor(Model):
             raise ValueError("Unsupported cell type.")
 
         x = self.inputs_placeholder
-        ### YOUR CODE HERE (~2-3 lines)
-        ### END YOUR CODE
 
+        _ , state = tf.nn.dynamic_rnn(cell=cell, inputs=x,dtype=tf.float32)
+        preds = tf.nn.sigmoid(state)
         return preds #state # preds
 
     def add_loss_op(self, preds):
@@ -106,11 +106,7 @@ class SequencePredictor(Model):
             loss: A 0-d tensor (scalar)
         """
         y = self.labels_placeholder
-
-        ### YOUR CODE HERE (~1-2 lines)
-
-        ### END YOUR CODE
-
+        loss = tf.reduce_mean(tf.nn.l2_loss(y-preds))
         return loss
 
     def add_training_op(self, loss):
@@ -139,9 +135,19 @@ class SequencePredictor(Model):
             train_op: The Op for training.
         """
 
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.config.lr)
+        opt = tf.train.GradientDescentOptimizer(learning_rate=self.config.lr)
 
         ### YOUR CODE HERE (~6-10 lines)
+        grads_and_vars = opt.compute_gradients(loss)
+        grads, vars = zip(*grads_and_vars)
+        self.grad_norm = tf.global_norm(grads)
+        if self.config.clip_gradients:
+            grads, self.grad_norm = tf.clip_by_global_norm(grads,self.config.max_grad_norm)
+            grads_and_vars = zip(grads,vars)
+        train_op = opt.apply_gradients(grads_and_vars)
+
+
+
 
         # - Remember to clip gradients only if self.config.clip_gradients
         # is True.
